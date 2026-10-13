@@ -111,7 +111,7 @@ function App() {
   return (
     <main style={styles.container}>
       <header>
-        <h1>Product Management</h1>
+        <h1>System Management</h1>
         <p>Manage your products efficiently</p>
       </header>
 
