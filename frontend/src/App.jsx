@@ -1,41 +1,36 @@
-
 import { useEffect, useState } from "react";
 import { apiRequest } from "./services/api";
-import "./App.css";
 
 function App() {
   const [message, setMessage] = useState("Connecting...");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function checkBackend() {
+    async function testConnection() {
       try {
         const data = await apiRequest("/health");
-        setMessage(data.message);
+        setMessage(JSON.stringify(data, null, 2));
       } catch (err) {
         setError(err.message);
-        setMessage("");
       }
     }
 
-    checkBackend();
+    testConnection();
   }, []);
 
   return (
-    <main className="app">
+    <div style={{ padding: "30px", fontFamily: "Arial" }}>
       <h1>Fullstack Boilerplate</h1>
-      <p>React Frontend + Laravel Backend</p>
+      <h2>React + Laravel Connection Test</h2>
 
-      <section className="status-card">
-        <h2>Backend Connection</h2>
-
-        {error ? (
-          <p className="error">Connection failed: {error}</p>
-        ) : (
-          <p className="success">{message}</p>
-        )}
-      </section>
-    </main>
+      {error ? (
+        <p style={{ color: "red" }}>
+          Connection failed: {error}
+        </p>
+      ) : (
+        <pre>{message}</pre>
+      )}
+    </div>
   );
 }
 
