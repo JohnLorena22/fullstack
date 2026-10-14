@@ -352,8 +352,8 @@ function App() {
 
             <p className="form-description">
               {editingStation
-                ? "Update the computer station information."
-                : "Add a new computer station to the cafe."}
+                ? "Update the ticket information."
+                : "Add a new ticket ."}
             </p>
 
             <form
