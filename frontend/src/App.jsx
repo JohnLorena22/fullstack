@@ -334,10 +334,10 @@ function App() {
       <div className="station-page">
         <header className="station-header">
           <div>
-            <h1>Computer Cafe</h1>
+            <h1>IT System Management</h1>
 
             <p>
-              Station Management System
+              Ticket Management System
             </p>
           </div>
         </header>
