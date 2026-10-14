@@ -1,76 +1,49 @@
-import { useState, useEffect } from "react";
-import "./App.css";
+import { useEffect, useState } from "react";
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "./services/productApi";
+import ProductForm from "./components/ProductForm";
 
 function App() {
-  // ==========================================
-  // LOGIN
-  // ==========================================
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [products, setProducts] = useState([]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [editingId, setEditingId] = useState(null);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [success, setSuccess] = useState("");
 
-  // ==========================================
-  // STATION FORM
-  // ==========================================
-  const [showAddStation, setShowAddStation] = useState(false);
-  const [editingStation, setEditingStation] = useState(null);
+  // Load products from Laravel API
+  async function loadProducts() {
+    try {
+      setError("");
 
-  // ==========================================
-  // STATIONS
-  // ==========================================
-  const [stations, setStations] = useState([]);
+      const data = await getProducts();
+      setProducts(data);
+    } catch (err) {
+      setError(err.message || "Failed to load.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  // ==========================================
-  // FORM FIELDS
-  // ==========================================
-  const [stationName, setStationName] = useState("");
-  const [tier, setTier] = useState("");
-  const [rate, setRate] = useState("");
-  const [status, setStatus] = useState("Available");
-  const [formError, setFormError] = useState("");
-
-  // ==========================================
-  // GET ALL STATIONS
-  // ==========================================
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/stations")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch stations.");
-        }
-
-        return response.json();
-      })
-      .then((data) => {
-        setStations(data);
-      })
-      .catch((error) => {
-        console.error("Error fetching stations:", error);
-      });
+    loadProducts();
   }, []);
 
-  // ==========================================
-  // LOGIN
-  // ==========================================
-  const handleLogin = (e) => {
-    e.preventDefault();
+  // Clear the form
+  function resetForm() {
+    setName("");
+    setDescription("");
+    setEditingId(null);
+  }
 
-    if (
-      username === "admin" &&
-      password === "password"
-    ) {
-      setError("");
-      setIsLoggedIn(true);
-    } else {
-      setError("Invalid username or password.");
-    }
-  };
-
-  // ==========================================
-  // ADD STATION
-  // ==========================================
-    // Add or update a product
+  // Add or update a product
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -86,7 +59,7 @@ function App() {
     try {
       if (editingId !== null) {
         await updateProduct(editingId, product);
-        setSuccess(" Updated successfully!");
+        setSuccess("Updated successfully!");
       } else {
         await createProduct(product);
         setSuccess("Added successfully!");
@@ -101,462 +74,184 @@ function App() {
     }
   }
 
+  // Load product details into the form
+  function handleEdit(product) {
+    setName(product.name);s
+    setDescription(product.description || "");
+    setEditingId(product.id);
 
-  // ==========================================
-  // UPDATE STATION
-  // ==========================================
-  const handleUpdateStation = async (e) => {
-    e.preventDefault();
-
-    if (!stationName || !tier || !rate || !status) {
-      setFormError("Please fill in all fields.");
-      return;
-    }
-
-    if (Number(rate) <= 0) {
-      setFormError("Hourly rate must be greater than 0.");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/stations/${editingStation.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            name: stationName,
-            tier: tier,
-            rate: Number(rate),
-            status: status,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update station.");
-      }
-
-      const updatedStation = await response.json();
-
-      setStations((currentStations) =>
-        currentStations.map((station) =>
-          station.id === updatedStation.id
-            ? updatedStation
-            : station
-        )
-      );
-
-      clearForm();
-    } catch (error) {
-      console.error("Error updating station:", error);
-      setFormError("Failed to update station.");
-    }
-  };
-
-  // ==========================================
-  // DELETE STATION
-  // ==========================================
-  const handleDeleteStation = async (stationId) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this station?"
-    );
-
-    if (!confirmDelete) {
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/stations/${stationId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to delete station.");
-      }
-
-      setStations((currentStations) =>
-        currentStations.filter(
-          (station) => station.id !== stationId
-        )
-      );
-    } catch (error) {
-      console.error("Error deleting station:", error);
-      alert("Failed to delete station.");
-    }
-  };
-
-  // ==========================================
-  // CLEAR FORM
-  // ==========================================
-  const clearForm = () => {
-    setStationName("");
-    setTier("");
-    setRate("");
-    setStatus("Available");
-    setFormError("");
-    setShowAddStation(false);
-    setEditingStation(null);
-  };
-
-  // ==========================================
-  // OPEN ADD STATION FORM
-  // ==========================================
-  const openAddStation = () => {
-    setEditingStation(null);
-    setStationName("");
-    setTier("");
-    setRate("");
-    setStatus("Available");
-    setFormError("");
-    setShowAddStation(true);
-  };
-
-  // ==========================================
-  // OPEN EDIT STATION FORM
-  // ==========================================
-  const openEditStation = (station) => {
-    setEditingStation(station);
-    setStationName(station.name);
-    setTier(station.tier);
-    setRate(station.rate);
-    setStatus(station.status);
-    setFormError("");
-  };
-
-  // ==========================================
-  // GET STATUS CLASS
-  // ==========================================
-  const getStatusClass = (stationStatus) => {
-    if (stationStatus === "Available") {
-      return "available";
-    }
-
-    if (stationStatus === "In Use") {
-      return "in-use";
-    }
-
-    if (stationStatus === "Maintenance") {
-      return "maintenance";
-    }
-
-    return "unknown";
-  };
-
-  // ==========================================
-  // LOGIN PAGE
-  // ==========================================
-  if (!isLoggedIn) {
-    return (
-      <div className="login-page">
-        <div className="login-card">
-          <h1>IT System Management</h1>
-
-          <p className="subtitle">
-            Ticket Management System
-          </p>
-
-          <form onSubmit={handleLogin}>
-            <label htmlFor="username">
-              Username
-            </label>
-
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) =>
-                setUsername(e.target.value)
-              }
-              placeholder="Enter username"
-            />
-
-            <label htmlFor="password">
-              Password
-            </label>
-
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
-              placeholder="Enter password"
-            />
-
-            {error && (
-              <p className="error-message">
-                {error}
-              </p>
-            )}
-
-            <button type="submit">
-              Login
-            </button>
-          </form>
-        </div>
-      </div>
-    );
+    setError("");
+    setSuccess("");
   }
 
-  // ==========================================
-  // ADD / EDIT STATION PAGE
-  // ==========================================
-  if (showAddStation || editingStation) {
-    return (
-      <div className="station-page">
-        <header className="station-header">
-          <div>
-            <h1>IT System Management</h1>
-
-            <p>
-              Ticket Management System
-            </p>
-          </div>
-        </header>
-
-        <main className="station-content">
-          <div className="form-card">
-            <h2>
-              {editingStation
-                ? "Edit Station"
-                : "Add Station"}
-            </h2>
-
-            <p className="form-description">
-              {editingStation
-                ? "Update the ticket information."
-                : "Add a new ticket ."}
-            </p>
-
-            <form
-              onSubmit={
-                editingStation
-                  ? handleUpdateStation
-                  : handleAddStation
-              }
-            >
-              {/* STATION NAME */}
-              <label htmlFor="stationName">
-                 Name 
-              </label>
-
-              <input
-                id="stationName"
-                type="text"
-                value={stationName}
-                onChange={(e) =>
-                  setStationName(e.target.value)
-                }
-                placeholder="Example: PC-04"
-              />
-
-              {/* TIER */}
-              <label htmlFor="tier">
-                 Category
-              </label>
-
-              <select
-                id="tier"
-                value={tier}
-                onChange={(e) =>
-                  setTier(e.target.value)
-                }
-              >
-                <option value="">
-                  Select a tier
-                </option>
-
-                <option value="Regular">
-                  Regular
-                </option>
-
-                <option value="Premium">
-                  Premium
-                </option>
-
-                <option value="VIP">
-                  VIP
-                </option>
-              </select>
-
-              {/* STATUS */}
-              <label htmlFor="status">
-                Status
-              </label>
-
-              <select
-                id="status"
-                value={status}
-                onChange={(e) =>
-                  setStatus(e.target.value)
-                }
-              >
-                <option value="Single">
-                  Single
-                </option>
-
-                <option value="Taken">
-                  Taken
-                </option>
-
-                <option value="Prefer not to say">
-                 Prefer not to say
-                </option>
-              </select>
-
-              {/* remove time*/}
-
-              {/* ERROR */}
-              {formError && (
-                <p className="error-message">
-                  {formError}
-                </p>
-              )}
-
-              {/* BUTTONS */}
-              <div className="form-buttons">
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={clearForm}
-                >
-                  Cancel
-                </button>
-
-                <button type="submit">
-                  {editingStation
-                    ? "Update "
-                    : "Save "}
-                </button>
-              </div>
-            </form>
-          </div>
-        </main>
-      </div>
+  // Delete a product
+  async function handleDelete(id) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this ?"
     );
+
+    if (!confirmed) return;
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await deleteProduct(id);
+      setSuccess("Deleted successfully!");
+      await loadProducts();
+    } catch (err) {
+      setError(err.message || "Failed to delete.");
+    }
   }
 
-  // ==========================================
-  // STATION LIST PAGE
-  // ==========================================
   return (
-    <div className="station-page">
-      <header className="station-header">
-        <div>
-          <h1>IT System Management</h1>
-
-          <p>
-            Manage tickets
-          </p>
-        </div>
-
-        <button
-          className="logout-button"
-          onClick={() => {
-            setIsLoggedIn(false);
-            setUsername("");
-            setPassword("");
-          }}
-        >
-          Logout
-        </button>
+    <main style={styles.container}>
+      <header>
+        <h1>System Management</h1>
+        <p>Manage your products efficiently</p>
       </header>
 
-      <main className="station-content">
-        <div className="station-title">
-          <div>
-            <h2>Station List</h2>
+      {/* Product Form */}
+      <section style={styles.card}>
+        <ProductForm
+          name={name}
+          setName={setName}
+          description={description}
+          setDescription={setDescription}
+          editingId={editingId}
+          saving={saving}
+          onSubmit={handleSubmit}
+          onCancel={resetForm}
+        />
+      </section>
 
-            <p>
-              serve customers and manage tickets
-            </p>
-          </div>
+      {/* Error Message */}
+      {error && (
+        <p role="alert" style={styles.error}>
+          {error}
+        </p>
+      )}
 
-          <button
-            className="add-button"
-            onClick={openAddStation}
-          >
-            +
-          </button>
-        </div>
+      {/* Success Message */}
+      {success && (
+        <p role="status" style={styles.success}>
+          {success}
+        </p>
+      )}
 
-        <div className="station-list">
-          {stations.length === 0 ? (
-            <p>Not found.</p>
-          ) : (
-            stations.map((station) => (
-              <div
-                className="station-card"
-                key={station.id}
-              >
-                <div className="station-info">
-                  <h3>{station.name}</h3>
+      {/* Product List */}
+      <section style={styles.card}>
+        <h2>Name List</h2>
 
-                  <p>
-                    Tier: {station.tier}
-                  </p>
+        {loading ? (
+          <p>Loading names...</p>
+        ) : names.length === 0 ? (
+          <p>No names yet. Add your first name above!</p>
+        ) : (
+          <div style={styles.list}>
+            {names.map((name) => (
+              <article key={name.id} style={styles.product}>
+                <div>
+                  <h3>{customer.name}</h3>
 
-                  <p>
-                    Hourly Rate: ₱{station.rate}
-                  </p>
-
-                  {/* STATUS */}
-                  <div className="station-status">
-                    <span
-                      className={`status-dot ${getStatusClass(
-                        station.status
-                      )}`}
-                    ></span>
-
-                    <span
-                      className={`status-text ${getStatusClass(
-                        station.status
-                      )}`}
-                    >
-                      {station.status}
-                    </span>
-                  </div>
+                  {customer.description && (
+                    <p>{customer.description}</p>
+                  )}
                 </div>
 
-                <div className="station-actions">
-                  {/* EDIT */}
+                <div style={styles.actions}>
                   <button
-                    className="details-button"
-                    onClick={() =>
-                      openEditStation(station)
-                    }
+                    type="button"
+                    onClick={() => handleEdit(product)}
+                    style={styles.editButton}
                   >
                     Edit
                   </button>
 
-                  {/* DELETE */}
                   <button
-                    className="delete-button"
-                    onClick={() =>
-                      handleDeleteStation(station.id)
-                    }
+                    type="button"
+                    onClick={() => handleDelete(product.id)}
+                    style={styles.deleteButton}
                   >
                     Delete
                   </button>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      </main>
-    </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
+
+
+const styles = {
+  container: {
+    width: "100%",
+    maxWidth: "1100px",
+    margin: "0 auto",
+    padding: "clamp(12px, 3vw, 32px)",
+    boxSizing: "border-box",
+    fontFamily: "Arial, sans-serif",
+    color: "#292524",
+  },
+  card: {
+    width: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    padding: "clamp(16px, 3vw, 28px)",
+    marginTop: "24px",
+    border: "1px solid #e7e5e4",
+    borderRadius: "12px",
+    background: "#ffffff",
+  },
+  error: {
+    padding: "12px",
+    background: "#fee2e2",
+    color: "#991b1b",
+    borderRadius: "6px",
+    overflowWrap: "anywhere",
+  },
+  success: {
+    padding: "12px",
+    background: "#dcfce7",
+    color: "#166534",
+    borderRadius: "6px",
+    overflowWrap: "anywhere",
+  },
+  list: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    width: "100%",
+  },
+  product: {
+    padding: "16px",
+    border: "1px solid #e7e5e4",
+    borderRadius: "8px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "12px",
+    minWidth: 0,
+    overflowWrap: "anywhere",
+  },
+  actions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+  },
+  editButton: {
+    padding: "8px 12px",
+    cursor: "pointer",
+  },
+  deleteButton: {
+    padding: "8px 12px",
+    color: "#b91c1c",
+    cursor: "pointer",
+  },
+};
 
 export default App;
