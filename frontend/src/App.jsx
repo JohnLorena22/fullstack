@@ -70,54 +70,37 @@ function App() {
   // ==========================================
   // ADD STATION
   // ==========================================
-  const handleAddStation = async (e) => {
-    e.preventDefault();
+    // Add or update a product
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-    if (!stationName || !tier || !rate || !status) {
-      setFormError("Please fill in all fields.");
-      return;
-    }
+    setError("");
+    setSuccess("");
+    setSaving(true);
 
-    if (Number(rate) <= 0) {
-      setFormError("Hourly rate must be greater than 0.");
-      return;
-    }
+    const product = {
+      name: name.trim(),
+      description: description.trim() || null,
+    };
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/stations",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            name: stationName,
-            tier: tier,
-            rate: Number(rate),
-            status: status,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to add station.");
+      if (editingId !== null) {
+        await updateProduct(editingId, product);
+        setSuccess(" Updated successfully!");
+      } else {
+        await createProduct(product);
+        setSuccess("Added successfully!");
       }
 
-      const newStation = await response.json();
-
-      setStations((currentStations) => [
-        ...currentStations,
-        newStation,
-      ]);
-
-      clearForm();
-    } catch (error) {
-      console.error("Error adding station:", error);
-      setFormError("Failed to add station.");
+      resetForm();
+      await loadProducts();
+    } catch (err) {
+      setError(err.message || "Failed to save.");
+    } finally {
+      setSaving(false);
     }
-  };
+  }
+
 
   // ==========================================
   // UPDATE STATION
