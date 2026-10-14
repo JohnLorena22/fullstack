@@ -1,8 +1,7 @@
 function ProductForm({
   name,
   setName,
-  price,
-  setPrice,
+
   description,
   setDescription,
   editingId,
@@ -58,8 +57,8 @@ function ProductForm({
           {saving
             ? "Saving..."
             : editingId !== null
-              ? "Update Product"
-              : "Add Product"}
+              ? "Update"
+              : "Add "}
         </button>
 
         {editingId !== null && (
