@@ -1,267 +1,593 @@
-import { useEffect, useState } from "react";
-import {
-  getProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-} from "./services/productApi";
-import ProductForm from "./components/ProductForm";
+import { useState, useEffect } from "react";
+import "./App.css";
 
 function App() {
-  const [products, setProducts] = useState([]);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [editingId, setEditingId] = useState(null);
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // ==========================================
+  // LOGIN
+  // ==========================================
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Load products from Laravel API
-  async function loadProducts() {
-    try {
-      setError("");
+  // ==========================================
+  // STATION FORM
+  // ==========================================
+  const [showAddStation, setShowAddStation] = useState(false);
+  const [editingStation, setEditingStation] = useState(null);
 
-      const data = await getProducts();
-      setProducts(data);
-    } catch (err) {
-      setError(err.message || "Failed to load products.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  // ==========================================
+  // STATIONS
+  // ==========================================
+  const [stations, setStations] = useState([]);
 
+  // ==========================================
+  // FORM FIELDS
+  // ==========================================
+  const [stationName, setStationName] = useState("");
+  const [tier, setTier] = useState("");
+  const [rate, setRate] = useState("");
+  const [status, setStatus] = useState("Available");
+  const [formError, setFormError] = useState("");
+
+  // ==========================================
+  // GET ALL STATIONS
+  // ==========================================
   useEffect(() => {
-    loadProducts();
+    fetch("http://127.0.0.1:8000/api/stations")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch stations.");
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        setStations(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching stations:", error);
+      });
   }, []);
 
-  // Clear the form
-  function resetForm() {
-    setName("");
-    setPrice("");
-    setDescription("");
-    setEditingId(null);
-  }
+  // ==========================================
+  // LOGIN
+  // ==========================================
+  const handleLogin = (e) => {
+    e.preventDefault();
 
-  // Add or update a product
-  async function handleSubmit(event) {
-    event.preventDefault();
+    if (
+      username === "cafe_admin" &&
+      password === "pcshop2026"
+    ) {
+      setError("");
+      setIsLoggedIn(true);
+    } else {
+      setError("Invalid username or password.");
+    }
+  };
 
-    setError("");
-    setSuccess("");
-    setSaving(true);
+  // ==========================================
+  // ADD STATION
+  // ==========================================
+  const handleAddStation = async (e) => {
+    e.preventDefault();
 
-    const product = {
-      name: name.trim(),
-      price: Number(price),
-      description: description.trim() || null,
-    };
+    if (!stationName || !tier || !rate || !status) {
+      setFormError("Please fill in all fields.");
+      return;
+    }
+
+    if (Number(rate) <= 0) {
+      setFormError("Hourly rate must be greater than 0.");
+      return;
+    }
 
     try {
-      if (editingId !== null) {
-        await updateProduct(editingId, product);
-        setSuccess("Product updated successfully!");
-      } else {
-        await createProduct(product);
-        setSuccess("Product added successfully!");
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/stations",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            name: stationName,
+            tier: tier,
+            rate: Number(rate),
+            status: status,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to add station.");
       }
 
-      resetForm();
-      await loadProducts();
-    } catch (err) {
-      setError(err.message || "Failed to save product.");
-    } finally {
-      setSaving(false);
+      const newStation = await response.json();
+
+      setStations((currentStations) => [
+        ...currentStations,
+        newStation,
+      ]);
+
+      clearForm();
+    } catch (error) {
+      console.error("Error adding station:", error);
+      setFormError("Failed to add station.");
     }
-  }
+  };
 
-  // Load product details into the form
-  function handleEdit(product) {
-    setName(product.name);
-    setPrice(String(product.price));
-    setDescription(product.description || "");
-    setEditingId(product.id);
+  // ==========================================
+  // UPDATE STATION
+  // ==========================================
+  const handleUpdateStation = async (e) => {
+    e.preventDefault();
 
-    setError("");
-    setSuccess("");
-  }
+    if (!stationName || !tier || !rate || !status) {
+      setFormError("Please fill in all fields.");
+      return;
+    }
 
-  // Delete a product
-  async function handleDelete(id) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this product?"
-    );
-
-    if (!confirmed) return;
-
-    setError("");
-    setSuccess("");
+    if (Number(rate) <= 0) {
+      setFormError("Hourly rate must be greater than 0.");
+      return;
+    }
 
     try {
-      await deleteProduct(id);
-      setSuccess("Product deleted successfully!");
-      await loadProducts();
-    } catch (err) {
-      setError(err.message || "Failed to delete product.");
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/stations/${editingStation.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            name: stationName,
+            tier: tier,
+            rate: Number(rate),
+            status: status,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update station.");
+      }
+
+      const updatedStation = await response.json();
+
+      setStations((currentStations) =>
+        currentStations.map((station) =>
+          station.id === updatedStation.id
+            ? updatedStation
+            : station
+        )
+      );
+
+      clearForm();
+    } catch (error) {
+      console.error("Error updating station:", error);
+      setFormError("Failed to update station.");
     }
+  };
+
+  // ==========================================
+  // DELETE STATION
+  // ==========================================
+  const handleDeleteStation = async (stationId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this station?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/stations/${stationId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete station.");
+      }
+
+      setStations((currentStations) =>
+        currentStations.filter(
+          (station) => station.id !== stationId
+        )
+      );
+    } catch (error) {
+      console.error("Error deleting station:", error);
+      alert("Failed to delete station.");
+    }
+  };
+
+  // ==========================================
+  // CLEAR FORM
+  // ==========================================
+  const clearForm = () => {
+    setStationName("");
+    setTier("");
+    setRate("");
+    setStatus("Available");
+    setFormError("");
+    setShowAddStation(false);
+    setEditingStation(null);
+  };
+
+  // ==========================================
+  // OPEN ADD STATION FORM
+  // ==========================================
+  const openAddStation = () => {
+    setEditingStation(null);
+    setStationName("");
+    setTier("");
+    setRate("");
+    setStatus("Available");
+    setFormError("");
+    setShowAddStation(true);
+  };
+
+  // ==========================================
+  // OPEN EDIT STATION FORM
+  // ==========================================
+  const openEditStation = (station) => {
+    setEditingStation(station);
+    setStationName(station.name);
+    setTier(station.tier);
+    setRate(station.rate);
+    setStatus(station.status);
+    setFormError("");
+  };
+
+  // ==========================================
+  // GET STATUS CLASS
+  // ==========================================
+  const getStatusClass = (stationStatus) => {
+    if (stationStatus === "Available") {
+      return "available";
+    }
+
+    if (stationStatus === "In Use") {
+      return "in-use";
+    }
+
+    if (stationStatus === "Maintenance") {
+      return "maintenance";
+    }
+
+    return "unknown";
+  };
+
+  // ==========================================
+  // LOGIN PAGE
+  // ==========================================
+  if (!isLoggedIn) {
+    return (
+      <div className="login-page">
+        <div className="login-card">
+          <h1>Computer Cafe</h1>
+
+          <p className="subtitle">
+            Station Management System
+          </p>
+
+          <form onSubmit={handleLogin}>
+            <label htmlFor="username">
+              Username
+            </label>
+
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) =>
+                setUsername(e.target.value)
+              }
+              placeholder="Enter username"
+            />
+
+            <label htmlFor="password">
+              Password
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+              placeholder="Enter password"
+            />
+
+            {error && (
+              <p className="error-message">
+                {error}
+              </p>
+            )}
+
+            <button type="submit">
+              Login
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
+  // ==========================================
+  // ADD / EDIT STATION PAGE
+  // ==========================================
+  if (showAddStation || editingStation) {
+    return (
+      <div className="station-page">
+        <header className="station-header">
+          <div>
+            <h1>Computer Cafe</h1>
+
+            <p>
+              Station Management System
+            </p>
+          </div>
+        </header>
+
+        <main className="station-content">
+          <div className="form-card">
+            <h2>
+              {editingStation
+                ? "Edit Station"
+                : "Add Station"}
+            </h2>
+
+            <p className="form-description">
+              {editingStation
+                ? "Update the computer station information."
+                : "Add a new computer station to the cafe."}
+            </p>
+
+            <form
+              onSubmit={
+                editingStation
+                  ? handleUpdateStation
+                  : handleAddStation
+              }
+            >
+              {/* STATION NAME */}
+              <label htmlFor="stationName">
+                Station Name / PC Number
+              </label>
+
+              <input
+                id="stationName"
+                type="text"
+                value={stationName}
+                onChange={(e) =>
+                  setStationName(e.target.value)
+                }
+                placeholder="Example: PC-04"
+              />
+
+              {/* TIER */}
+              <label htmlFor="tier">
+                Tier / Category
+              </label>
+
+              <select
+                id="tier"
+                value={tier}
+                onChange={(e) =>
+                  setTier(e.target.value)
+                }
+              >
+                <option value="">
+                  Select a tier
+                </option>
+
+                <option value="Regular">
+                  Regular
+                </option>
+
+                <option value="Premium">
+                  Premium
+                </option>
+
+                <option value="VIP">
+                  VIP
+                </option>
+              </select>
+
+              {/* STATUS */}
+              <label htmlFor="status">
+                Status
+              </label>
+
+              <select
+                id="status"
+                value={status}
+                onChange={(e) =>
+                  setStatus(e.target.value)
+                }
+              >
+                <option value="Available">
+                  Available
+                </option>
+
+                <option value="In Use">
+                  In Use
+                </option>
+
+                <option value="Maintenance">
+                  Maintenance
+                </option>
+              </select>
+
+              {/* HOURLY RATE */}
+              <label htmlFor="rate">
+                Hourly Rate
+              </label>
+
+              <input
+                id="rate"
+                type="number"
+                value={rate}
+                onChange={(e) =>
+                  setRate(e.target.value)
+                }
+                placeholder="Example: 30"
+                min="1"
+              />
+
+              {/* ERROR */}
+              {formError && (
+                <p className="error-message">
+                  {formError}
+                </p>
+              )}
+
+              {/* BUTTONS */}
+              <div className="form-buttons">
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={clearForm}
+                >
+                  Cancel
+                </button>
+
+                <button type="submit">
+                  {editingStation
+                    ? "Update Station"
+                    : "Save Station"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // STATION LIST PAGE
+  // ==========================================
   return (
-    <main style={styles.container}>
-      <header>
-        <h1>System Management</h1>
-        <p>Manage your products efficiently</p>
+    <div className="station-page">
+      <header className="station-header">
+        <div>
+          <h1>IT System Management</h1>
+
+          <p>
+            Manage tickets
+          </p>
+        </div>
+
+        <button
+          className="logout-button"
+          onClick={() => {
+            setIsLoggedIn(false);
+            setUsername("");
+            setPassword("");
+          }}
+        >
+          Logout
+        </button>
       </header>
 
-      {/* Product Form */}
-      <section style={styles.card}>
-        <ProductForm
-          name={name}
-          setName={setName}
-          price={price}
-          setPrice={setPrice}
-          description={description}
-          setDescription={setDescription}
-          editingId={editingId}
-          saving={saving}
-          onSubmit={handleSubmit}
-          onCancel={resetForm}
-        />
-      </section>
+      <main className="station-content">
+        <div className="station-title">
+          <div>
+            <h2>Station List</h2>
 
-      {/* Error Message */}
-      {error && (
-        <p role="alert" style={styles.error}>
-          {error}
-        </p>
-      )}
+            <p>
+              Manage your computer cafe stations
+            </p>
+          </div>
 
-      {/* Success Message */}
-      {success && (
-        <p role="status" style={styles.success}>
-          {success}
-        </p>
-      )}
+          <button
+            className="add-button"
+            onClick={openAddStation}
+          >
+            +
+          </button>
+        </div>
 
-      {/* Product List */}
-      <section style={styles.card}>
-        <h2>Product List</h2>
-
-        {loading ? (
-          <p>Loading products...</p>
-        ) : products.length === 0 ? (
-          <p>No products yet. Add your first product above!</p>
-        ) : (
-          <div style={styles.list}>
-            {products.map((product) => (
-              <article key={product.id} style={styles.product}>
-                <div>
-                  <h3>{product.name}</h3>
+        <div className="station-list">
+          {stations.length === 0 ? (
+            <p>No stations found.</p>
+          ) : (
+            stations.map((station) => (
+              <div
+                className="station-card"
+                key={station.id}
+              >
+                <div className="station-info">
+                  <h3>{station.name}</h3>
 
                   <p>
-                    Price: ₱{Number(product.price).toFixed(2)}
+                    Tier: {station.tier}
                   </p>
 
-                  {product.description && (
-                    <p>{product.description}</p>
-                  )}
+                  <p>
+                    Hourly Rate: ₱{station.rate}
+                  </p>
+
+                  {/* STATUS */}
+                  <div className="station-status">
+                    <span
+                      className={`status-dot ${getStatusClass(
+                        station.status
+                      )}`}
+                    ></span>
+
+                    <span
+                      className={`status-text ${getStatusClass(
+                        station.status
+                      )}`}
+                    >
+                      {station.status}
+                    </span>
+                  </div>
                 </div>
 
-                <div style={styles.actions}>
+                <div className="station-actions">
+                  {/* EDIT */}
                   <button
-                    type="button"
-                    onClick={() => handleEdit(product)}
-                    style={styles.editButton}
+                    className="details-button"
+                    onClick={() =>
+                      openEditStation(station)
+                    }
                   >
                     Edit
                   </button>
 
+                  {/* DELETE */}
                   <button
-                    type="button"
-                    onClick={() => handleDelete(product.id)}
-                    style={styles.deleteButton}
+                    className="delete-button"
+                    onClick={() =>
+                      handleDeleteStation(station.id)
+                    }
                   >
                     Delete
                   </button>
                 </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-    </main>
+              </div>
+            ))
+          )}
+        </div>
+      </main>
+    </div>
   );
 }
-
-
-const styles = {
-  container: {
-    width: "100%",
-    maxWidth: "1100px",
-    margin: "0 auto",
-    padding: "clamp(12px, 3vw, 32px)",
-    boxSizing: "border-box",
-    fontFamily: "Arial, sans-serif",
-    color: "#292524",
-  },
-  card: {
-    width: "100%",
-    minWidth: 0,
-    boxSizing: "border-box",
-    padding: "clamp(16px, 3vw, 28px)",
-    marginTop: "24px",
-    border: "1px solid #e7e5e4",
-    borderRadius: "12px",
-    background: "#ffffff",
-  },
-  error: {
-    padding: "12px",
-    background: "#fee2e2",
-    color: "#991b1b",
-    borderRadius: "6px",
-    overflowWrap: "anywhere",
-  },
-  success: {
-    padding: "12px",
-    background: "#dcfce7",
-    color: "#166534",
-    borderRadius: "6px",
-    overflowWrap: "anywhere",
-  },
-  list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    width: "100%",
-  },
-  product: {
-    padding: "16px",
-    border: "1px solid #e7e5e4",
-    borderRadius: "8px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: "12px",
-    minWidth: 0,
-    overflowWrap: "anywhere",
-  },
-  actions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-  },
-  editButton: {
-    padding: "8px 12px",
-    cursor: "pointer",
-  },
-  deleteButton: {
-    padding: "8px 12px",
-    color: "#b91c1c",
-    cursor: "pointer",
-  },
-};
 
 export default App;
