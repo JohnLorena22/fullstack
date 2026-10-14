@@ -365,7 +365,7 @@ function App() {
             >
               {/* STATION NAME */}
               <label htmlFor="stationName">
-                Station Name / PC Number
+                 Name 
               </label>
 
               <input
@@ -380,7 +380,7 @@ function App() {
 
               {/* TIER */}
               <label htmlFor="tier">
-                Tier / Category
+                 Category
               </label>
 
               <select
@@ -419,34 +419,20 @@ function App() {
                   setStatus(e.target.value)
                 }
               >
-                <option value="Available">
-                  Available
+                <option value="Single">
+                  Single
                 </option>
 
-                <option value="In Use">
-                  In Use
+                <option value="Taken">
+                  Taken
                 </option>
 
-                <option value="Maintenance">
-                  Maintenance
+                <option value="Prefer not to say">
+                 Prefer not to say
                 </option>
               </select>
 
-              {/* HOURLY RATE */}
-              <label htmlFor="rate">
-                Hourly Rate
-              </label>
-
-              <input
-                id="rate"
-                type="number"
-                value={rate}
-                onChange={(e) =>
-                  setRate(e.target.value)
-                }
-                placeholder="Example: 30"
-                min="1"
-              />
+              {/* remove time*/}
 
               {/* ERROR */}
               {formError && (
@@ -467,8 +453,8 @@ function App() {
 
                 <button type="submit">
                   {editingStation
-                    ? "Update Station"
-                    : "Save Station"}
+                    ? "Update "
+                    : "Save "}
                 </button>
               </div>
             </form>
@@ -510,7 +496,7 @@ function App() {
             <h2>Station List</h2>
 
             <p>
-              Manage your computer cafe stations
+              serve customers and manage tickets
             </p>
           </div>
 
@@ -524,7 +510,7 @@ function App() {
 
         <div className="station-list">
           {stations.length === 0 ? (
-            <p>No stations found.</p>
+            <p>Not found.</p>
           ) : (
             stations.map((station) => (
               <div
