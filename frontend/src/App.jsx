@@ -8,7 +8,6 @@ import {
 import ProductForm from "./components/ProductForm";
 
 function App() {
-  const [names, setNames] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [editingId, setEditingId] = useState(null);
