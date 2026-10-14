@@ -57,8 +57,8 @@ function App() {
     e.preventDefault();
 
     if (
-      username === "cafe_admin" &&
-      password === "pcshop2026"
+      username === "admin" &&
+      password === "password"
     ) {
       setError("");
       setIsLoggedIn(true);
@@ -276,10 +276,10 @@ function App() {
     return (
       <div className="login-page">
         <div className="login-card">
-          <h1>Computer Cafe</h1>
+          <h1>IT System Management</h1>
 
           <p className="subtitle">
-            Station Management System
+            Ticket Management System
           </p>
 
           <form onSubmit={handleLogin}>
