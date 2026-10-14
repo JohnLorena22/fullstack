@@ -8,7 +8,7 @@ import {
 import ProductForm from "./components/ProductForm";
 
 function App() {
-  const [products, setProducts] = useState([]);
+  const [names, setNames] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -18,13 +18,13 @@ function App() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Load products from Laravel API
-  async function loadProducts() {
+  // Load names from Laravel API
+  async function loadNames() {
     try {
       setError("");
 
       const data = await getProducts();
-      setProducts(data);
+      setNames(data);
     } catch (err) {
       setError(err.message || "Failed to load.");
     } finally {
@@ -33,7 +33,7 @@ function App() {
   }
 
   useEffect(() => {
-    loadProducts();
+    loadNames();
   }, []);
 
   // Clear the form
@@ -108,10 +108,10 @@ function App() {
     <main style={styles.container}>
       <header>
         <h1>System Management</h1>
-        <p>Manage your products efficiently</p>
+        <p>Manage names efficiently</p>
       </header>
 
-      {/* Product Form */}
+      {/* Name Form */}
       <section style={styles.card}>
         <ProductForm
           name={name}
@@ -139,7 +139,7 @@ function App() {
         </p>
       )}
 
-      {/* Product List */}
+      {/* Name List */}
       <section style={styles.card}>
         <h2>Name List</h2>
 
@@ -152,17 +152,17 @@ function App() {
             {names.map((name) => (
               <article key={name.id} style={styles.product}>
                 <div>
-                  <h3>{customer.name}</h3>
+                  <h3>{name.name}</h3>
 
-                  {customer.description && (
-                    <p>{customer.description}</p>
+                  {name.description && (
+                    <p>{name.description}</p>
                   )}
                 </div>
 
                 <div style={styles.actions}>
                   <button
                     type="button"
-                    onClick={() => handleEdit(product)}
+                    onClick={() => handleEdit(name)}
                     style={styles.editButton}
                   >
                     Edit
@@ -170,7 +170,7 @@ function App() {
 
                   <button
                     type="button"
-                    onClick={() => handleDelete(product.id)}
+                    onClick={() => handleDelete(name.id)}
                     style={styles.deleteButton}
                   >
                     Delete
