@@ -1,39 +1,147 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  getEmployees,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+} from "./services/employeeApi";
 import "./App.css";
 
-const menuItems = [
-  { id: "dashboard", icon: "▦", label: "Dashboard" },
-  { id: "employees", icon: "♙", label: "Employees" },
-  { id: "positions", icon: "▤", label: "Company Positions" },
-  { id: "tickets", icon: "▧", label: "IT Help Desk" },
-  { id: "reports", icon: "▥", label: "Reports" },
-];
-
-const sampleEmployees = [
-  { id: 1, name: "Alex Morgan", department: "IT Department", position: "IT Support", status: "Active" },
-  { id: 2, name: "Jamie Lee", department: "Human Resources", position: "HR Manager", status: "Active" },
-  { id: 3, name: "Taylor Cruz", department: "Finance", position: "Accountant", status: "Active" },
-];
-
-const sampleTickets = [
-  { id: "HD-001", subject: "Computer cannot connect to Wi-Fi", requester: "Alex Morgan", priority: "High", status: "Open" },
-  { id: "HD-002", subject: "Request for software installation", requester: "Jamie Lee", priority: "Normal", status: "In Progress" },
-  { id: "HD-003", subject: "Printer connection issue", requester: "Taylor Cruz", priority: "Normal", status: "Resolved" },
-];
+const emptyForm = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  phone: "",
+  department: "",
+  position: "",
+};
 
 function App() {
-  const [activePage, setActivePage] = useState("dashboard");
+  const [employees, setEmployees] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const pageTitle =
-    menuItems.find((item) => item.id === activePage)?.label || "Dashboard";
+  async function loadEmployees() {
+    setLoading(true);
+    setError("");
 
-  const filteredEmployees = sampleEmployees.filter((employee) =>
-    `${employee.name} ${employee.department} ${employee.position}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+    try {
+      const data = await getEmployees();
+      setEmployees(data);
+    } catch (err) {
+      setError(err.message || "Unable to load employees.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingId(null);
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      if (editingId !== null) {
+        await updateEmployee(editingId, form);
+        setSuccess("Employee updated successfully.");
+      } else {
+        await createEmployee(form);
+        setSuccess("Employee added successfully.");
+      }
+
+      resetForm();
+      await loadEmployees();
+    } catch (err) {
+      if (err.errors) {
+        const messages = Object.values(err.errors).flat();
+        setError(messages.join(" "));
+      } else {
+        setError(err.message || "Unable to save employee.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleEdit(employee) {
+    setForm({
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      email: employee.email,
+      phone: employee.phone || "",
+      department: employee.department,
+      position: employee.position,
+    });
+
+    setEditingId(employee.id);
+    setError("");
+    setSuccess("");
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleDelete(employee) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${employee.first_name} ${employee.last_name}?`
+    );
+
+    if (!confirmed) return;
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await deleteEmployee(employee.id);
+
+      if (editingId === employee.id) {
+        resetForm();
+      }
+
+      setSuccess("Employee deleted successfully.");
+      await loadEmployees();
+    } catch (err) {
+      setError(err.message || "Unable to delete employee.");
+    }
+  }
+
+  const filteredEmployees = employees.filter((employee) => {
+    const searchableText = [
+      employee.first_name,
+      employee.last_name,
+      employee.email,
+      employee.department,
+      employee.position,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return searchableText.includes(search.toLowerCase());
+  });
 
   return (
     <div className="app-shell">
@@ -41,34 +149,38 @@ function App() {
         <div className="brand">
           <div className="brand-icon">IT</div>
           <div>
-            <strong>HelpDesk</strong>
-            <span>Information System</span>
+            <h2>IT Manager</h2>
+            <p>Management System</p>
           </div>
         </div>
 
-        <p className="menu-heading">WORKSPACE</p>
+        <p className="nav-heading">WORKSPACE</p>
 
-        <nav className="navigation">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activePage === item.id ? "active" : ""}`}
-              onClick={() => {
-                setActivePage(item.id);
-                setSearch("");
-              }}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        <div className="nav-item active">
+          <span>▦</span>
+          Dashboard
+        </div>
 
-        <div className="sidebar-footer">
-          <div className="avatar">AD</div>
+        <div className="nav-item selected">
+          <span>♙</span>
+          Employees
+        </div>
+
+        <div className="nav-item">
+          <span>▤</span>
+          IT Support
+        </div>
+
+        <div className="nav-item">
+          <span>▥</span>
+          Reports
+        </div>
+
+        <div className="sidebar-bottom">
+          <div className="profile-avatar">A</div>
           <div>
             <strong>Administrator</strong>
-            <span>System Admin</span>
+            <p>Local workspace</p>
           </div>
         </div>
       </aside>
@@ -76,241 +188,287 @@ function App() {
       <main className="main-content">
         <header className="topbar">
           <div>
-            <p className="breadcrumb">Workspace / {pageTitle}</p>
-            <h1>{pageTitle}</h1>
+            <p className="breadcrumb">Workspace / Employees</p>
+            <h1>Employee Management</h1>
+            <p className="page-subtitle">
+              Manage your company's employee information.
+            </p>
           </div>
-          <div className="topbar-status">
-            <span className="status-dot" />
-            IT Management Portal
-          </div>
+
+          <button
+            className="primary-button"
+            onClick={() => {
+              resetForm();
+              setError("");
+              setSuccess("");
+              document
+                .getElementById("employee-form")
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            + Add Employee
+          </button>
         </header>
 
-        <div className="page-content">
-          {activePage === "dashboard" && (
-            <>
-              <section className="welcome-panel">
-                <div>
-                  <p className="eyebrow">INFORMATION MANAGEMENT</p>
-                  <h2>Welcome to your workspace</h2>
-                  <p>
-                    Manage company employees, positions, and IT support requests
-                    in one place.
-                  </p>
-                </div>
-                <div className="welcome-art">IT</div>
-              </section>
+        <section className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon purple">♙</div>
+            <p>Total Employees</p>
+            <h2>{employees.length}</h2>
+            <span>Registered employee records</span>
+          </div>
 
-              <section className="stats-grid">
-                <StatCard label="Total Employees" value="03" detail="Sample records" icon="♙" />
-                <StatCard label="Open Tickets" value="01" detail="Needs attention" icon="▧" />
-                <StatCard label="In Progress" value="01" detail="Being handled" icon="◷" />
-                <StatCard label="Resolved Tickets" value="01" detail="Completed" icon="✓" />
-              </section>
+          <div className="stat-card">
+            <div className="stat-icon blue">▤</div>
+            <p>Departments</p>
+            <h2>
+              {new Set(
+                employees.map((employee) => employee.department)
+              ).size}
+            </h2>
+            <span>Departments represented</span>
+          </div>
 
-              <section className="panel">
-                <div className="panel-header">
-                  <div>
-                    <h2>Recent IT Requests</h2>
-                    <p>Example tickets for the initial interface</p>
-                  </div>
-                  <button
-                    className="secondary-button"
-                    onClick={() => setActivePage("tickets")}
-                  >
-                    View all
-                  </button>
-                </div>
-                <TicketTable tickets={sampleTickets.slice(0, 3)} />
-              </section>
-            </>
-          )}
+          <div className="stat-card">
+            <div className="stat-icon green">✓</div>
+            <p>Search Results</p>
+            <h2>{filteredEmployees.length}</h2>
+            <span>Employees matching your search</span>
+          </div>
+        </section>
 
-          {activePage === "employees" && (
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Employee Directory</h2>
-                  <p>Company personnel and their assigned positions</p>
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    alert("We will build the Add Employee form in the next step.")
-                  }
-                >
-                  + Add Employee
-                </button>
-              </div>
+        {error && (
+          <div className="alert error-alert" role="alert">
+            {error}
+            <button onClick={() => setError("")}>×</button>
+          </div>
+        )}
 
-              <input
-                className="search-input"
-                placeholder="Search employees, departments, or positions..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
+        {success && (
+          <div className="alert success-alert" role="status">
+            {success}
+            <button onClick={() => setSuccess("")}>×</button>
+          </div>
+        )}
 
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>EMPLOYEE</th>
-                      <th>DEPARTMENT</th>
-                      <th>POSITION</th>
-                      <th>STATUS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredEmployees.map((employee) => (
-                      <tr key={employee.id}>
-                        <td><strong>{employee.name}</strong></td>
-                        <td>{employee.department}</td>
-                        <td>{employee.position}</td>
-                        <td><span className="pill resolved">{employee.status}</span></td>
-                      </tr>
-                    ))}
-                    {filteredEmployees.length === 0 && (
-                      <tr>
-                        <td colSpan="4">No matching employees found.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          {activePage === "positions" && (
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Company Positions</h2>
-                  <p>Positions must exist before assigning them to employees.</p>
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    alert("We will build position management in a later step.")
-                  }
-                >
-                  + Add Position
-                </button>
-              </div>
-              <div className="notice">
-                <strong>Position validation</strong>
-                <p>
-                  The backend will verify that an employee's selected position
-                  exists in the company positions database.
-                </p>
-              </div>
-              <ul className="position-list">
-                {["IT Support", "HR Manager", "Accountant"].map((position) => (
-                  <li key={position}>
-                    <span className="position-symbol">▤</span>
-                    <strong>{position}</strong>
-                    <span className="position-tag">Sample position</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {activePage === "tickets" && (
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h2>IT Support Tickets</h2>
-                  <p>Track technical issues and service requests.</p>
-                </div>
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    alert("We will build the ticket form in a later step.")
-                  }
-                >
-                  + New Ticket
-                </button>
-              </div>
-              <TicketTable tickets={sampleTickets} />
-            </section>
-          )}
-
-          {activePage === "reports" && (
-            <section className="panel">
-              <h2>Reports Overview</h2>
-              <p className="muted">
-                Reports will summarize employee records, ticket statuses, and
-                IT support activity after the database is connected.
+        <section className="content-card" id="employee-form">
+          <div className="section-heading">
+            <div>
+              <h2>
+                {editingId !== null ? "Edit Employee" : "Add New Employee"}
+              </h2>
+              <p>
+                {editingId !== null
+                  ? "Update the employee's information below."
+                  : "Enter the employee's information below."}
               </p>
-              <div className="notice">
-                These dashboard figures are examples, not saved database records.
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="first_name">First Name *</label>
+                <input
+                  id="first_name"
+                  name="first_name"
+                  value={form.first_name}
+                  onChange={handleChange}
+                  placeholder="Enter first name"
+                  maxLength={255}
+                  required
+                />
               </div>
-            </section>
-          )}
 
-          <footer className="page-footer">
-            <span>IT Help Desk & Information Management</span>
-            <span>Development Preview</span>
-          </footer>
-        </div>
-      </main>
-    </div>
-  );
-}
+              <div className="form-group">
+                <label htmlFor="last_name">Last Name *</label>
+                <input
+                  id="last_name"
+                  name="last_name"
+                  value={form.last_name}
+                  onChange={handleChange}
+                  placeholder="Enter last name"
+                  maxLength={255}
+                  required
+                />
+              </div>
 
-function StatCard({ label, value, detail, icon }) {
-  return (
-    <article className="stat-card">
-      <div className="stat-top">
-        <span>{label}</span>
-        <span className="stat-icon">{icon}</span>
-      </div>
-      <strong className="stat-value">{value}</strong>
-      <span className="stat-detail">{detail}</span>
-    </article>
-  );
-}
+              <div className="form-group">
+                <label htmlFor="email">Email Address *</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="employee@company.com"
+                  maxLength={255}
+                  required
+                />
+              </div>
 
-function TicketTable({ tickets }) {
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>TICKET</th>
-            <th>SUBJECT</th>
-            <th>REQUESTER</th>
-            <th>PRIORITY</th>
-            <th>STATUS</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tickets.map((ticket) => (
-            <tr key={ticket.id}>
-              <td><strong>{ticket.id}</strong></td>
-              <td>{ticket.subject}</td>
-              <td>{ticket.requester}</td>
-              <td>
-                <span className={`pill ${ticket.priority === "High" ? "high" : "normal"}`}>
-                  {ticket.priority}
-                </span>
-              </td>
-              <td>
-                <span
-                  className={`pill ${
-                    ticket.status === "Resolved"
-                      ? "resolved"
-                      : ticket.status === "In Progress"
-                        ? "progress"
-                        : "open"
-                  }`}
+              <div className="form-group">
+                <label htmlFor="phone">Phone Number</label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="Enter phone number"
+                  maxLength={255}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="department">Department *</label>
+                <input
+                  id="department"
+                  name="department"
+                  value={form.department}
+                  onChange={handleChange}
+                  placeholder="e.g. Information Technology"
+                  maxLength={255}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="position">Position *</label>
+                <input
+                  id="position"
+                  name="position"
+                  value={form.position}
+                  onChange={handleChange}
+                  placeholder="e.g. IT Support Specialist"
+                  maxLength={255}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-actions">
+              {editingId !== null && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={resetForm}
+                  disabled={saving}
                 >
-                  {ticket.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  Cancel
+                </button>
+              )}
+
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={saving}
+              >
+                {saving
+                  ? "Saving..."
+                  : editingId !== null
+                    ? "Save Changes"
+                    : "Save Employee"}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section className="content-card">
+          <div className="section-heading employee-list-heading">
+            <div>
+              <h2>Employee Directory</h2>
+              <p>View and manage registered employees.</p>
+            </div>
+
+            <input
+              className="search-input"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search employees..."
+              aria-label="Search employees"
+            />
+          </div>
+
+          {loading ? (
+            <div className="empty-state">Loading employees...</div>
+          ) : filteredEmployees.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">♙</div>
+              <h3>
+                {search ? "No matching employees" : "No employees yet"}
+              </h3>
+              <p>
+                {search
+                  ? "Try a different search term."
+                  : "Add your first employee using the form above."}
+              </p>
+            </div>
+          ) : (
+            <div className="table-wrapper">
+              <table className="employee-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredEmployees.map((employee) => (
+                    <tr key={employee.id}>
+                      <td>
+                        <div className="employee-name">
+                          <div className="employee-avatar">
+                            {employee.first_name.charAt(0)}
+                            {employee.last_name.charAt(0)}
+                          </div>
+                          <strong>
+                            {employee.first_name} {employee.last_name}
+                          </strong>
+                        </div>
+                      </td>
+                      <td>{employee.email}</td>
+                      <td>{employee.department}</td>
+                      <td>
+                        <span className="position-badge">
+                          {employee.position}
+                        </span>
+                      </td>
+                      <td>{employee.phone || "—"}</td>
+                      <td>
+                        <div className="table-actions">
+                          <button
+                            className="edit-button"
+                            onClick={() => handleEdit(employee)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="delete-button"
+                            onClick={() => handleDelete(employee)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <footer className="page-footer">
+          IT Management System · Employee Management
+        </footer>
+      </main>
     </div>
   );
 }
