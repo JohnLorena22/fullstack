@@ -104,8 +104,7 @@ button:disabled {
   text-align: center;
 }
 
-.nav-item.active,
-.nav-item.selected {
+.nav-item.active {
   background: #44403c;
   color: #fff;
 }

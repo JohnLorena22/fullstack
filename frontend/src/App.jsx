@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   getEmployees,
@@ -42,7 +41,22 @@ function App() {
   }
 
   useEffect(() => {
-    loadEmployees();
+    let ignore = false;
+
+    getEmployees()
+      .then((data) => {
+        if (!ignore) setEmployees(data);
+      })
+      .catch((err) => {
+        if (!ignore) setError(err.message || "Unable to load employees.");
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   function handleChange(event) {
@@ -102,7 +116,9 @@ function App() {
     setError("");
     setSuccess("");
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document
+      .getElementById("employee-form")
+      ?.scrollIntoView({ behavior: "smooth" });
   }
 
   async function handleDelete(employee) {
@@ -156,12 +172,12 @@ function App() {
 
         <p className="nav-heading">WORKSPACE</p>
 
-        <div className="nav-item active">
+        <div className="nav-item">
           <span>▦</span>
           Dashboard
         </div>
 
-        <div className="nav-item selected">
+        <div className="nav-item active" aria-current="page">
           <span>♙</span>
           Employees
         </div>

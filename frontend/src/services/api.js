@@ -23,9 +23,12 @@ export async function apiRequest(endpoint, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       data.message || `Request failed (HTTP ${response.status}).`
     );
+    error.status = response.status;
+    error.errors = data.errors || {};
+    throw error;
   }
 
   return data;

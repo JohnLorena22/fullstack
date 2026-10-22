@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\EmployeeRequest;
 use App\Models\Employee;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
@@ -15,18 +14,9 @@ class EmployeeController extends Controller
         );
     }
 
-    public function store(Request $request)
+    public function store(EmployeeRequest $request)
     {
-        $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:employees,email'],
-            'phone' => ['nullable', 'string', 'max:255'],
-            'department' => ['required', 'string', 'max:255'],
-            'position' => ['required', 'string', 'max:255'],
-        ]);
-
-        $employee = Employee::create($validated);
+        $employee = Employee::create($request->validated());
 
         return response()->json($employee, 201);
     }
@@ -36,23 +26,9 @@ class EmployeeController extends Controller
         return response()->json($employee);
     }
 
-    public function update(Request $request, Employee $employee)
+    public function update(EmployeeRequest $request, Employee $employee)
     {
-        $validated = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                Rule::unique('employees', 'email')->ignore($employee->id),
-            ],
-            'phone' => ['nullable', 'string', 'max:255'],
-            'department' => ['required', 'string', 'max:255'],
-            'position' => ['required', 'string', 'max:255'],
-        ]);
-
-        $employee->update($validated);
+        $employee->update($request->validated());
 
         return response()->json($employee);
     }

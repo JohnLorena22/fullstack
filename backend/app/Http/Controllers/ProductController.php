@@ -2,27 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProductRequest;
 use App\Models\Product;
-use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
     // Get all products
     public function index()
     {
-        return response()->json(Product::all());
+        return response()->json(Product::orderBy('id', 'desc')->get());
     }
 
     // Create a product
-    public function store(Request $request)
+    public function store(ProductRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'description' => 'nullable|string',
-        ]);
-
-        $product = Product::create($validated);
+        $product = Product::create($request->validated());
 
         return response()->json($product, 201);
     }
@@ -34,15 +28,9 @@ class ProductController extends Controller
     }
 
     // Update a product
-    public function update(Request $request, Product $product)
+    public function update(ProductRequest $request, Product $product)
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'price' => 'sometimes|required|numeric|min:0',
-            'description' => 'sometimes|nullable|string',
-        ]);
-
-        $product->update($validated);
+        $product->update($request->validated());
 
         return response()->json($product);
     }
