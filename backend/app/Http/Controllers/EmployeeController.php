@@ -11,7 +11,9 @@ class EmployeeController extends Controller
     public function index()
     {
         return response()->json(
-            Employee::orderBy('id', 'desc')->get()
+            Employee::with('position.department')
+                ->orderBy('id', 'desc')
+                ->get()
         );
     }
 
@@ -22,18 +24,22 @@ class EmployeeController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:employees,email'],
             'phone' => ['nullable', 'string', 'max:255'],
-            'department' => ['required', 'string', 'max:255'],
-            'position' => ['required', 'string', 'max:255'],
+            'position_id' => ['required', 'integer', 'exists:positions,id'],
         ]);
 
         $employee = Employee::create($validated);
 
-        return response()->json($employee, 201);
+        return response()->json(
+            $employee->load('position.department'),
+            201
+        );
     }
 
     public function show(Employee $employee)
     {
-        return response()->json($employee);
+        return response()->json(
+            $employee->load('position.department')
+        );
     }
 
     public function update(Request $request, Employee $employee)
@@ -48,13 +54,14 @@ class EmployeeController extends Controller
                 Rule::unique('employees', 'email')->ignore($employee->id),
             ],
             'phone' => ['nullable', 'string', 'max:255'],
-            'department' => ['required', 'string', 'max:255'],
-            'position' => ['required', 'string', 'max:255'],
+            'position_id' => ['required', 'integer', 'exists:positions,id'],
         ]);
 
         $employee->update($validated);
 
-        return response()->json($employee);
+        return response()->json(
+            $employee->load('position.department')
+        );
     }
 
     public function destroy(Employee $employee)

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Employee extends Model
 {
@@ -11,7 +12,11 @@ class Employee extends Model
         'last_name',
         'email',
         'phone',
-        'department',
-        'position',
+        'position_id',
     ];
+
+    public function position(): BelongsTo
+    {
+        return $this->belongsTo(Position::class);
+    }
 }
