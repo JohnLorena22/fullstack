@@ -6,6 +6,7 @@ import {
   deleteEmployee,
 } from "./services/employeeApi";
 import "./App.css";
+import SupportTickets from "./components/SupportTickets";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -685,15 +686,7 @@ function App() {
         )}
 
         {activePage === "support" && (
-          <section className="content-card placeholder-card">
-            <div className="placeholder-icon">▤</div>
-            <h2>IT Support</h2>
-            <p>
-              The help desk module will let employees submit technical
-              issues and track their support requests.
-            </p>
-            <p className="placeholder-status">Module not implemented yet</p>
-          </section>
+          <SupportTickets employees={employees} />
         )}
 
         {activePage === "reports" && (
