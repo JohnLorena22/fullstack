@@ -32,6 +32,7 @@ async function getCollection(endpoint) {
 }
 
 function App() {
+  const [activePage, setActivePage] = useState("dashboard");
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -81,6 +82,25 @@ function App() {
   function resetForm() {
     setForm(emptyForm);
     setEditingId(null);
+  }
+
+  function openPage(page) {
+    setActivePage(page);
+    setError("");
+    setSuccess("");
+  }
+
+  function openEmployeeForm() {
+    setActivePage("employees");
+    resetForm();
+    setError("");
+    setSuccess("");
+
+    setTimeout(() => {
+      document
+        .getElementById("employee-form")
+        ?.scrollIntoView({ behavior: "smooth" });
+    }, 0);
   }
 
   async function handleSubmit(event) {
@@ -137,10 +157,13 @@ function App() {
     setEditingId(employee.id);
     setError("");
     setSuccess("");
+    setActivePage("employees");
 
-    document
-      .getElementById("employee-form")
-      ?.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => {
+      document
+        .getElementById("employee-form")
+        ?.scrollIntoView({ behavior: "smooth" });
+    }, 0);
   }
 
   async function handleDelete(employee) {
@@ -168,10 +191,7 @@ function App() {
   }
 
   function getDepartmentName(employee) {
-    return (
-      employee.position?.department?.name ||
-      "—"
-    );
+    return employee.position?.department?.name || "—";
   }
 
   function getPositionName(employee) {
@@ -193,6 +213,31 @@ function App() {
     return searchableText.includes(search.toLowerCase());
   });
 
+  const pageDetails = {
+    dashboard: {
+      breadcrumb: "Workspace / Dashboard",
+      title: "Dashboard",
+      subtitle: "Overview of your company's IT management system.",
+    },
+    employees: {
+      breadcrumb: "Workspace / Employees",
+      title: "Employee Management",
+      subtitle: "Manage your company's employee information.",
+    },
+    support: {
+      breadcrumb: "Workspace / IT Support",
+      title: "IT Support",
+      subtitle: "Manage technical issues and support requests.",
+    },
+    reports: {
+      breadcrumb: "Workspace / Reports",
+      title: "Reports",
+      subtitle: "Review company and IT management information.",
+    },
+  };
+
+  const currentPage = pageDetails[activePage];
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -206,25 +251,49 @@ function App() {
 
         <p className="nav-heading">WORKSPACE</p>
 
-        <div className="nav-item active">
+        <button
+          type="button"
+          className={`nav-item ${
+            activePage === "dashboard" ? "active" : ""
+          }`}
+          onClick={() => openPage("dashboard")}
+        >
           <span>▦</span>
           Dashboard
-        </div>
+        </button>
 
-        <div className="nav-item selected">
+        <button
+          type="button"
+          className={`nav-item ${
+            activePage === "employees" ? "active" : ""
+          }`}
+          onClick={() => openPage("employees")}
+        >
           <span>♙</span>
           Employees
-        </div>
+        </button>
 
-        <div className="nav-item">
+        <button
+          type="button"
+          className={`nav-item ${
+            activePage === "support" ? "active" : ""
+          }`}
+          onClick={() => openPage("support")}
+        >
           <span>▤</span>
           IT Support
-        </div>
+        </button>
 
-        <div className="nav-item">
+        <button
+          type="button"
+          className={`nav-item ${
+            activePage === "reports" ? "active" : ""
+          }`}
+          onClick={() => openPage("reports")}
+        >
           <span>▥</span>
           Reports
-        </div>
+        </button>
 
         <div className="sidebar-bottom">
           <div className="profile-avatar">A</div>
@@ -238,27 +307,20 @@ function App() {
       <main className="main-content">
         <header className="topbar">
           <div>
-            <p className="breadcrumb">Workspace / Employees</p>
-            <h1>Employee Management</h1>
-            <p className="page-subtitle">
-              Manage your company's employee information.
-            </p>
+            <p className="breadcrumb">{currentPage.breadcrumb}</p>
+            <h1>{currentPage.title}</h1>
+            <p className="page-subtitle">{currentPage.subtitle}</p>
           </div>
 
-          <button
-            type="button"
-            className="primary-button"
-            onClick={() => {
-              resetForm();
-              setError("");
-              setSuccess("");
-              document
-                .getElementById("employee-form")
-                ?.scrollIntoView({ behavior: "smooth" });
-            }}
-          >
-            + Add Employee
-          </button>
+          {activePage === "employees" && (
+            <button
+              type="button"
+              className="primary-button"
+              onClick={openEmployeeForm}
+            >
+              + Add Employee
+            </button>
+          )}
         </header>
 
         <section className="stats-grid">
@@ -278,9 +340,9 @@ function App() {
 
           <div className="stat-card">
             <div className="stat-icon green">✓</div>
-            <p>Search Results</p>
-            <h2>{filteredEmployees.length}</h2>
-            <span>Employees matching your search</span>
+            <p>Available Positions</p>
+            <h2>{positions.length}</h2>
+            <span>Registered company positions</span>
           </div>
         </section>
 
@@ -310,249 +372,344 @@ function App() {
           </div>
         )}
 
-        <section className="content-card" id="employee-form">
-          <div className="section-heading">
-            <div>
-              <h2>
-                {editingId !== null ? "Edit Employee" : "Add New Employee"}
-              </h2>
+        {activePage === "dashboard" && (
+          <section className="dashboard-welcome">
+            <div className="welcome-content">
+              <p className="welcome-label">IT MANAGEMENT WORKSPACE</p>
+              <h2>Welcome to your dashboard</h2>
               <p>
-                {editingId !== null
-                  ? "Update the employee's information below."
-                  : "Enter the employee's information below."}
+                Manage your employees, organize company positions, and
+                access your IT support workspace from one place.
               </p>
             </div>
-          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-group">
-                <label htmlFor="first_name">First Name *</label>
-                <input
-                  id="first_name"
-                  name="first_name"
-                  value={form.first_name}
-                  onChange={handleChange}
-                  placeholder="Enter first name"
-                  maxLength={255}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="last_name">Last Name *</label>
-                <input
-                  id="last_name"
-                  name="last_name"
-                  value={form.last_name}
-                  onChange={handleChange}
-                  placeholder="Enter last name"
-                  maxLength={255}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="email">Email Address *</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="employee@company.com"
-                  maxLength={255}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="phone">Phone Number</label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="Enter phone number"
-                  maxLength={255}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="department-display">Department</label>
-                <input
-                  id="department-display"
-                  value={
-                    positions.find(
-                      (position) =>
-                        String(position.id) === String(form.position_id)
-                    )?.department?.name || "Select a position first"
-                  }
-                  readOnly
-                  aria-describedby="department-help"
-                />
-                <small id="department-help">
-                  The department comes from the selected position.
-                </small>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="position_id">Position *</label>
-                <select
-                  id="position_id"
-                  name="position_id"
-                  value={form.position_id}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select a position</option>
-
-                  {positions.map((position) => (
-                    <option key={position.id} value={position.id}>
-                      {position.name}
-                      {position.department?.name
-                        ? ` — ${position.department.name}`
-                        : ""}
-                    </option>
-                  ))}
-                </select>
-
-                {positions.length === 0 && (
-                  <small>
-                    No positions found. Add a department and position first.
-                  </small>
-                )}
-              </div>
-            </div>
-
-            <div className="form-actions">
-              {editingId !== null && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={resetForm}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-              )}
+            <div className="quick-actions">
+              <button
+                type="button"
+                className="quick-action"
+                onClick={() => openPage("employees")}
+              >
+                <span className="quick-action-icon">♙</span>
+                <strong>Employee Management</strong>
+                <span>View and manage employees</span>
+                <span className="quick-action-link">Open employees →</span>
+              </button>
 
               <button
-                type="submit"
-                className="primary-button"
-                disabled={saving || positions.length === 0}
+                type="button"
+                className="quick-action"
+                onClick={() => openPage("support")}
               >
-                {saving
-                  ? "Saving..."
-                  : editingId !== null
-                    ? "Save Changes"
-                    : "Save Employee"}
+                <span className="quick-action-icon">▤</span>
+                <strong>IT Support</strong>
+                <span>Access technical support</span>
+                <span className="quick-action-link">Open support →</span>
+              </button>
+
+              <button
+                type="button"
+                className="quick-action"
+                onClick={() => openPage("reports")}
+              >
+                <span className="quick-action-icon">▥</span>
+                <strong>Reports</strong>
+                <span>Review system information</span>
+                <span className="quick-action-link">View reports →</span>
               </button>
             </div>
-          </form>
-        </section>
 
-        <section className="content-card">
-          <div className="section-heading employee-list-heading">
-            <div>
-              <h2>Employee Directory</h2>
-              <p>View and manage registered employees.</p>
+            <div className="dashboard-summary">
+              <div>
+                <span>Employee records</span>
+                <strong>{employees.length}</strong>
+              </div>
+              <div>
+                <span>Departments</span>
+                <strong>{departments.length}</strong>
+              </div>
+              <div>
+                <span>Company positions</span>
+                <strong>{positions.length}</strong>
+              </div>
             </div>
+          </section>
+        )}
 
-            <input
-              className="search-input"
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search employees..."
-              aria-label="Search employees"
-            />
-          </div>
+        {activePage === "employees" && (
+          <>
+            <section className="content-card" id="employee-form">
+              <div className="section-heading">
+                <div>
+                  <h2>
+                    {editingId !== null
+                      ? "Edit Employee"
+                      : "Add New Employee"}
+                  </h2>
+                  <p>
+                    {editingId !== null
+                      ? "Update the employee's information below."
+                      : "Enter the employee's information below."}
+                  </p>
+                </div>
+              </div>
 
-          {loading ? (
-            <div className="empty-state">Loading employees...</div>
-          ) : filteredEmployees.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">♙</div>
-              <h3>
-                {search ? "No matching employees" : "No employees yet"}
-              </h3>
-              <p>
-                {search
-                  ? "Try a different search term."
-                  : "Add your first employee using the form above."}
-              </p>
-            </div>
-          ) : (
-            <div className="table-wrapper">
-              <table className="employee-table">
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Email</th>
-                    <th>Department</th>
-                    <th>Position</th>
-                    <th>Phone</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
+              <form onSubmit={handleSubmit}>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="first_name">First Name *</label>
+                    <input
+                      id="first_name"
+                      name="first_name"
+                      value={form.first_name}
+                      onChange={handleChange}
+                      placeholder="Enter first name"
+                      maxLength={255}
+                      required
+                    />
+                  </div>
 
-                <tbody>
-                  {filteredEmployees.map((employee) => (
-                    <tr key={employee.id}>
-                      <td>
-                        <div className="employee-name">
-                          <div className="employee-avatar">
-                            {employee.first_name?.charAt(0)}
-                            {employee.last_name?.charAt(0)}
-                          </div>
-                          <strong>
-                            {employee.first_name} {employee.last_name}
-                          </strong>
-                        </div>
-                      </td>
+                  <div className="form-group">
+                    <label htmlFor="last_name">Last Name *</label>
+                    <input
+                      id="last_name"
+                      name="last_name"
+                      value={form.last_name}
+                      onChange={handleChange}
+                      placeholder="Enter last name"
+                      maxLength={255}
+                      required
+                    />
+                  </div>
 
-                      <td>{employee.email}</td>
-                      <td>{getDepartmentName(employee)}</td>
+                  <div className="form-group">
+                    <label htmlFor="email">Email Address *</label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="employee@company.com"
+                      maxLength={255}
+                      required
+                    />
+                  </div>
 
-                      <td>
-                        <span className="position-badge">
-                          {getPositionName(employee)}
-                        </span>
-                      </td>
+                  <div className="form-group">
+                    <label htmlFor="phone">Phone Number</label>
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={form.phone}
+                      onChange={handleChange}
+                      placeholder="Enter phone number"
+                      maxLength={255}
+                    />
+                  </div>
 
-                      <td>{employee.phone || "—"}</td>
+                  <div className="form-group">
+                    <label htmlFor="department-display">Department</label>
+                    <input
+                      id="department-display"
+                      value={
+                        positions.find(
+                          (position) =>
+                            String(position.id) ===
+                            String(form.position_id)
+                        )?.department?.name || "Select a position first"
+                      }
+                      readOnly
+                      aria-describedby="department-help"
+                    />
+                    <small id="department-help">
+                      The department comes from the selected position.
+                    </small>
+                  </div>
 
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="edit-button"
-                            onClick={() => handleEdit(employee)}
-                          >
-                            Edit
-                          </button>
+                  <div className="form-group">
+                    <label htmlFor="position_id">Position *</label>
+                    <select
+                      id="position_id"
+                      name="position_id"
+                      value={form.position_id}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Select a position</option>
 
-                          <button
-                            type="button"
-                            className="delete-button"
-                            onClick={() => handleDelete(employee)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                      {positions.map((position) => (
+                        <option key={position.id} value={position.id}>
+                          {position.name}
+                          {position.department?.name
+                            ? ` — ${position.department.name}`
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+
+                    {positions.length === 0 && (
+                      <small>
+                        No positions found. Add a department and position
+                        first.
+                      </small>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  {editingId !== null && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={resetForm}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </button>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="primary-button"
+                    disabled={saving || positions.length === 0}
+                  >
+                    {saving
+                      ? "Saving..."
+                      : editingId !== null
+                        ? "Save Changes"
+                        : "Save Employee"}
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section className="content-card">
+              <div className="section-heading employee-list-heading">
+                <div>
+                  <h2>Employee Directory</h2>
+                  <p>View and manage registered employees.</p>
+                </div>
+
+                <input
+                  className="search-input"
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search employees..."
+                  aria-label="Search employees"
+                />
+              </div>
+
+              {loading ? (
+                <div className="empty-state">Loading employees...</div>
+              ) : filteredEmployees.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">♙</div>
+                  <h3>
+                    {search ? "No matching employees" : "No employees yet"}
+                  </h3>
+                  <p>
+                    {search
+                      ? "Try a different search term."
+                      : "Add your first employee using the form above."}
+                  </p>
+                </div>
+              ) : (
+                <div className="table-wrapper">
+                  <table className="employee-table">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Position</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {filteredEmployees.map((employee) => (
+                        <tr key={employee.id}>
+                          <td>
+                            <div className="employee-name">
+                              <div className="employee-avatar">
+                                {employee.first_name?.charAt(0)}
+                                {employee.last_name?.charAt(0)}
+                              </div>
+                              <strong>
+                                {employee.first_name} {employee.last_name}
+                              </strong>
+                            </div>
+                          </td>
+
+                          <td>{employee.email}</td>
+                          <td>{getDepartmentName(employee)}</td>
+
+                          <td>
+                            <span className="position-badge">
+                              {getPositionName(employee)}
+                            </span>
+                          </td>
+
+                          <td>{employee.phone || "—"}</td>
+
+                          <td>
+                            <div className="table-actions">
+                              <button
+                                type="button"
+                                className="edit-button"
+                                onClick={() => handleEdit(employee)}
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                className="delete-button"
+                                onClick={() => handleDelete(employee)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        {activePage === "support" && (
+          <section className="content-card placeholder-card">
+            <div className="placeholder-icon">▤</div>
+            <h2>IT Support</h2>
+            <p>
+              The help desk module will let employees submit technical
+              issues and track their support requests.
+            </p>
+            <p className="placeholder-status">Module not implemented yet</p>
+          </section>
+        )}
+
+        {activePage === "reports" && (
+          <section className="content-card placeholder-card">
+            <div className="placeholder-icon">▥</div>
+            <h2>Reports</h2>
+            <p>
+              This section will provide reports about employees,
+              departments, positions, and IT support requests.
+            </p>
+            <p className="placeholder-status">Module not implemented yet</p>
+          </section>
+        )}
 
         <footer className="page-footer">
-          IT Management System · Employee Management
+          IT Management System · {currentPage.title}
         </footer>
       </main>
     </div>
