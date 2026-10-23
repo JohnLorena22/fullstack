@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   getEmployees,
@@ -8,17 +7,34 @@ import {
 } from "./services/employeeApi";
 import "./App.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const emptyForm = {
   first_name: "",
   last_name: "",
   email: "",
   phone: "",
-  department: "",
-  position: "",
+  position_id: "",
 };
+
+async function getCollection(endpoint) {
+  const response = await fetch(`${API_URL}/${endpoint}`, {
+    headers: { Accept: "application/json" },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || `Unable to load ${endpoint}.`);
+  }
+
+  return data;
+}
 
 function App() {
   const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
@@ -27,22 +43,30 @@ function App() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function loadEmployees() {
+  async function loadData() {
     setLoading(true);
     setError("");
 
     try {
-      const data = await getEmployees();
-      setEmployees(data);
+      const [employeeData, departmentData, positionData] =
+        await Promise.all([
+          getEmployees(),
+          getCollection("departments"),
+          getCollection("positions"),
+        ]);
+
+      setEmployees(employeeData);
+      setDepartments(departmentData);
+      setPositions(positionData);
     } catch (err) {
-      setError(err.message || "Unable to load employees.");
+      setError(err.message || "Unable to load management data.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadEmployees();
+    loadData();
   }, []);
 
   function handleChange(event) {
@@ -66,20 +90,31 @@ function App() {
     setSuccess("");
 
     try {
+      const employeeData = {
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+        position_id: Number(form.position_id),
+      };
+
+      if (!employeeData.position_id) {
+        throw new Error("Please select a valid employee position.");
+      }
+
       if (editingId !== null) {
-        await updateEmployee(editingId, form);
+        await updateEmployee(editingId, employeeData);
         setSuccess("Employee updated successfully.");
       } else {
-        await createEmployee(form);
+        await createEmployee(employeeData);
         setSuccess("Employee added successfully.");
       }
 
       resetForm();
-      await loadEmployees();
+      await loadData();
     } catch (err) {
       if (err.errors) {
-        const messages = Object.values(err.errors).flat();
-        setError(messages.join(" "));
+        setError(Object.values(err.errors).flat().join(" "));
       } else {
         setError(err.message || "Unable to save employee.");
       }
@@ -90,19 +125,22 @@ function App() {
 
   function handleEdit(employee) {
     setForm({
-      first_name: employee.first_name,
-      last_name: employee.last_name,
-      email: employee.email,
+      first_name: employee.first_name || "",
+      last_name: employee.last_name || "",
+      email: employee.email || "",
       phone: employee.phone || "",
-      department: employee.department,
-      position: employee.position,
+      position_id: String(
+        employee.position_id ?? employee.position?.id ?? ""
+      ),
     });
 
     setEditingId(employee.id);
     setError("");
     setSuccess("");
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document
+      .getElementById("employee-form")
+      ?.scrollIntoView({ behavior: "smooth" });
   }
 
   async function handleDelete(employee) {
@@ -123,10 +161,21 @@ function App() {
       }
 
       setSuccess("Employee deleted successfully.");
-      await loadEmployees();
+      await loadData();
     } catch (err) {
       setError(err.message || "Unable to delete employee.");
     }
+  }
+
+  function getDepartmentName(employee) {
+    return (
+      employee.position?.department?.name ||
+      "—"
+    );
+  }
+
+  function getPositionName(employee) {
+    return employee.position?.name || "—";
   }
 
   const filteredEmployees = employees.filter((employee) => {
@@ -134,8 +183,9 @@ function App() {
       employee.first_name,
       employee.last_name,
       employee.email,
-      employee.department,
-      employee.position,
+      employee.phone,
+      getDepartmentName(employee),
+      getPositionName(employee),
     ]
       .join(" ")
       .toLowerCase();
@@ -196,6 +246,7 @@ function App() {
           </div>
 
           <button
+            type="button"
             className="primary-button"
             onClick={() => {
               resetForm();
@@ -221,12 +272,8 @@ function App() {
           <div className="stat-card">
             <div className="stat-icon blue">▤</div>
             <p>Departments</p>
-            <h2>
-              {new Set(
-                employees.map((employee) => employee.department)
-              ).size}
-            </h2>
-            <span>Departments represented</span>
+            <h2>{departments.length}</h2>
+            <span>Registered company departments</span>
           </div>
 
           <div className="stat-card">
@@ -240,14 +287,26 @@ function App() {
         {error && (
           <div className="alert error-alert" role="alert">
             {error}
-            <button onClick={() => setError("")}>×</button>
+            <button
+              type="button"
+              onClick={() => setError("")}
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
           </div>
         )}
 
         {success && (
           <div className="alert success-alert" role="status">
             {success}
-            <button onClick={() => setSuccess("")}>×</button>
+            <button
+              type="button"
+              onClick={() => setSuccess("")}
+              aria-label="Dismiss message"
+            >
+              ×
+            </button>
           </div>
         )}
 
@@ -321,29 +380,49 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="department">Department *</label>
+                <label htmlFor="department-display">Department</label>
                 <input
-                  id="department"
-                  name="department"
-                  value={form.department}
-                  onChange={handleChange}
-                  placeholder="e.g. Information Technology"
-                  maxLength={255}
-                  required
+                  id="department-display"
+                  value={
+                    positions.find(
+                      (position) =>
+                        String(position.id) === String(form.position_id)
+                    )?.department?.name || "Select a position first"
+                  }
+                  readOnly
+                  aria-describedby="department-help"
                 />
+                <small id="department-help">
+                  The department comes from the selected position.
+                </small>
               </div>
 
               <div className="form-group">
-                <label htmlFor="position">Position *</label>
-                <input
-                  id="position"
-                  name="position"
-                  value={form.position}
+                <label htmlFor="position_id">Position *</label>
+                <select
+                  id="position_id"
+                  name="position_id"
+                  value={form.position_id}
                   onChange={handleChange}
-                  placeholder="e.g. IT Support Specialist"
-                  maxLength={255}
                   required
-                />
+                >
+                  <option value="">Select a position</option>
+
+                  {positions.map((position) => (
+                    <option key={position.id} value={position.id}>
+                      {position.name}
+                      {position.department?.name
+                        ? ` — ${position.department.name}`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+
+                {positions.length === 0 && (
+                  <small>
+                    No positions found. Add a department and position first.
+                  </small>
+                )}
               </div>
             </div>
 
@@ -362,7 +441,7 @@ function App() {
               <button
                 type="submit"
                 className="primary-button"
-                disabled={saving}
+                disabled={saving || positions.length === 0}
               >
                 {saving
                   ? "Saving..."
@@ -425,31 +504,38 @@ function App() {
                       <td>
                         <div className="employee-name">
                           <div className="employee-avatar">
-                            {employee.first_name.charAt(0)}
-                            {employee.last_name.charAt(0)}
+                            {employee.first_name?.charAt(0)}
+                            {employee.last_name?.charAt(0)}
                           </div>
                           <strong>
                             {employee.first_name} {employee.last_name}
                           </strong>
                         </div>
                       </td>
+
                       <td>{employee.email}</td>
-                      <td>{employee.department}</td>
+                      <td>{getDepartmentName(employee)}</td>
+
                       <td>
                         <span className="position-badge">
-                          {employee.position}
+                          {getPositionName(employee)}
                         </span>
                       </td>
+
                       <td>{employee.phone || "—"}</td>
+
                       <td>
                         <div className="table-actions">
                           <button
+                            type="button"
                             className="edit-button"
                             onClick={() => handleEdit(employee)}
                           >
                             Edit
                           </button>
+
                           <button
+                            type="button"
                             className="delete-button"
                             onClick={() => handleDelete(employee)}
                           >
